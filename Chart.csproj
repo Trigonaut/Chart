@@ -1,0 +1,27 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="UI\MapHud.cs~RF66c6c918.TMP" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Allumeria\Allumeria.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Loader">
+      <HintPath>..\Alum_0.1\Loader.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="copy $(TargetDir)$(MSBuildProjectName).dll $(SolutionDir)Allumeria\bin\Debug\netcoreapp9.0\mods\$(MSBuildProjectName)\ /Y&#xD;&#xA;xcopy $(ProjectDir)res\* $(SolutionDir)Allumeria\bin\Debug\netcoreapp9.0\mods\$(MSBuildProjectName)\res\ /E /Y /C" />
+  </Target>
+
+</Project>
