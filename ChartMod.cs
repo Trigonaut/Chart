@@ -6,7 +6,7 @@ using Allumeria.Input;
 using Allumeria.Rendering;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
-using Alum;
+using Alum.API;
 using System.Collections;
 
 namespace Chart
@@ -21,22 +21,23 @@ namespace Chart
 
         public static Texture texture_map;
 
-        public static MapTexture currentMapTexture;
+        public static MapTexture? currentMapTexture;
+
         public static MapScanner mapScanner;
 
         public static ChartHUD menu_map_hud;
 
         public static InputChannel input_openMap;
+
         //public static InputChannel input_dumpMapCache;
 
         public static Dictionary<Block, Vector3i> blockColors = [];
-        public static byte[] blockAtlasPixels;
 
         public static Vector3i
             color_water_shallow =   new(0, 157, 237),
             color_water_deep =      new(0, 118, 198),
             color_lava =            new(221, 43, 16),
-            color_oak_leaves =      new(100, 157, 52),
+            color_oak_leaves =      new(80, 127, 62),
             color_birch_leaves =    new(178, 206, 70),
             color_maple_leaves =    new(252, 47, 55),
             color_pine_leaves =     new(26, 87, 41);
@@ -52,6 +53,7 @@ namespace Chart
         {
             //sound_map = new Wav();
             //sound_map.load("mods/Chart/res/map_sound.ogg");
+
             input_openMap = new("open_map", OpenTK.Windowing.GraphicsLibraryFramework.Keys.M);
             //input_dumpMapCache = new("dump_map", OpenTK.Windowing.GraphicsLibraryFramework.Keys.K);
 
@@ -69,10 +71,13 @@ namespace Chart
             list.Insert(0, menu_map_hud.map_panel);
 
             Texture terrainTexture = (Texture)Alum.Alum.allumeriaAssembly.GetType("Allumeria.Rendering.Drawing").GetField("defaultTexture").GetValue(null);
-            blockAtlasPixels = new byte[terrainTexture.size * terrainTexture.size * 4];
+            
+            byte[] blockAtlasPixels = new byte[terrainTexture.size * terrainTexture.size * 4];
+
             terrainTexture.Use();
             GL.GetTexImage(TextureTarget.Texture2D, 0, PixelFormat.Rgba, PixelType.UnsignedByte, blockAtlasPixels);
-            ThreadPool.QueueUserWorkItem(CalculateBlockColors, terrainTexture.size);
+
+            ThreadPool.QueueUserWorkItem(CalculateBlockColors, (terrainTexture.size, blockAtlasPixels));
         }
 
         public override void OnUpdateFrame()
@@ -85,15 +90,17 @@ namespace Chart
 
         public static void CalculateBlockColors(object? state)
         {
-            int size = (int)state;
+            (int size, byte[] atlasPixels) = ((int, byte[]))state;
+
             foreach (Block block in Block.blocks)
             {
-
                 FaceTexture tex = block.faceTexture;
-                Vector3i color = (0, 0, 0);
+                Vector3i color;
 
-                if (tex.umin == 0 && tex.vmin == 0) continue;
-
+                if (tex.umin == 0 && tex.vmin == 0)
+                {
+                    continue;
+                }
                 else
                 {
                     int
@@ -107,25 +114,22 @@ namespace Chart
                         for (int y = tex.vmin; y < tex.vmin + 16; y++)
                         {
                             int index = (y * size + x) * 4;
-                            byte a = blockAtlasPixels[index + 3];
-                            if (a < 255)
-                                continue;
 
-                            totalRed += blockAtlasPixels[index];
-                            totalGreen += blockAtlasPixels[index + 1];
-                            totalBlue += blockAtlasPixels[index + 2];
+                            byte alpha = atlasPixels[index + 3];
+
+                            if (alpha < 255) continue;
+
+                            totalRed += atlasPixels[index + 0];
+                            totalGreen += atlasPixels[index + 1];
+                            totalBlue += atlasPixels[index + 2];
+
                             totalPixels++;
                         }
                     }
 
                     if (totalPixels == 0) continue;
 
-                    int r = totalRed / totalPixels;
-                    int g = totalGreen / totalPixels;
-                    int b = totalBlue / totalPixels;
-
-
-                    color = (r, g, b);
+                    color = (totalRed / totalPixels, totalGreen / totalPixels, totalBlue / totalPixels);
                 }
 
                 blockColors.Add(block, color);
@@ -137,29 +141,30 @@ namespace Chart
             blockColors[Block.pine_leaves] = color_pine_leaves;
 
             blockColorsLoaded = true;
-            blockAtlasPixels = null;
         }
 
-        public override void OnSaveWorld(string dir)
+        public override void OnCreateWorld()
         {
-            mapScanner.StopScanning();
-            FileStream saveMap = File.OpenWrite(Game.saveDirectiory + "/saves/" + dir + "/map.png");
-            currentMapTexture.SavePng(saveMap);
-            mapScanner.StartScanning(currentMapTexture);
-        }
 
+        }
         public override void OnLoadWorld(string dir)
         {
-            while (Game.worldManager.world == null) Thread.Yield();
+            while (Game.worldManager.world == null)
+            {
+                Thread.Yield();
+            }
+
             currentMapTexture = new MapTexture(Game.worldManager.world.worldWidth * 32, Game.worldManager.world.worldLength * 32);
-            FileStream loadMap = null;
+
+            FileStream? loadMap = null;
             try
             {
                 loadMap = File.OpenRead(Game.saveDirectiory + "/saves/" + dir + "/map.png");
             }
-            catch (FileNotFoundException e)
+            catch (FileNotFoundException)
             {
                 Logger.Info("No Chart data found in save for " + dir + ". creating new map.png");
+
                 FileStream stream = File.Create(Game.saveDirectiory + "/saves/" + dir + "/map.png");
                 new StbImageWriteSharp.ImageWriter().WritePng(new byte[currentMapTexture.worldWidth * currentMapTexture.worldDepth * 4], currentMapTexture.worldWidth, currentMapTexture.worldDepth, StbImageWriteSharp.ColorComponents.RedGreenBlueAlpha, stream);
                 stream.Close();
@@ -168,7 +173,18 @@ namespace Chart
             }
 
             currentMapTexture.LoadPng(loadMap);
+
             Logger.Info("Loading Chart data for save " + dir);
+
+            mapScanner.StartScanning(currentMapTexture);
+        }
+
+        public override void OnSaveWorld(string dir)
+        {
+            mapScanner.StopScanning();
+
+            FileStream saveMap = File.OpenWrite(Game.saveDirectiory + "/saves/" + dir + "/map.png");
+            currentMapTexture.SavePng(saveMap);
 
             mapScanner.StartScanning(currentMapTexture);
         }
@@ -177,6 +193,31 @@ namespace Chart
         {
             mapScanner.StopScanning();
             currentMapTexture = null;
+        }
+
+        public override void OnDeleteWorld(string dir)
+        {
+            
+        }
+
+        public override void OnCreateCharacter()
+        {
+            
+        }
+
+        public override void OnLoadCharacter(string dir)
+        {
+            
+        }
+
+        public override void OnSaveCharacter(string dir)
+        {
+            
+        }
+
+        public override void OnDeleteCharacter(string dir)
+        {
+            
         }
     }
 }

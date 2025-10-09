@@ -12,12 +12,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Allumeria\Allumeria.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Reference Include="Loader">
-      <HintPath>..\Alum_0.1\Loader.dll</HintPath>
-    </Reference>
+    <ProjectReference Include="..\Alum\Alum.csproj" />
   </ItemGroup>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">

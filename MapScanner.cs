@@ -153,8 +153,8 @@ namespace Chart
                     //Fluid fluid = chunkManager.GetFluid(blockX, height, blockZ);
                 }
             }
-            (minArrayX, minArrayZ) = target.World2Array(minWorldX, minWorldZ);
-            (maxArrayX, maxArrayZ) = target.World2Array(maxWorldX, maxWorldZ);
+            (minArrayX, minArrayZ) = target.World2Array((minWorldX, minWorldZ));
+            (maxArrayX, maxArrayZ) = target.World2Array((maxWorldX, maxWorldZ));
             return wasModified;
         }
 

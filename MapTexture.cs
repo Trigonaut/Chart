@@ -1,6 +1,7 @@
 ﻿using Allumeria;
 using Allumeria.Rendering;
 using OpenTK.Graphics.OpenGL4;
+using OpenTK.Mathematics;
 using StbImageSharp;
 using StbImageWriteSharp;
 
@@ -62,8 +63,8 @@ namespace Chart
 
         public void UpdateTexture(int minX, int minZ, int maxX, int maxZ, byte[] data)
         {
-            (int minU, int maxV) = Array2Image(minX, minZ);
-            (int maxU, int minV) = Array2Image(maxX, maxZ);
+            (int minU, int maxV) = Array2Image((minX, minZ));
+            (int maxU, int minV) = Array2Image((maxX, maxZ));
 
             GL.BindTexture(TextureTarget.Texture2D, id);
             //GL.PixelStore(PixelStoreParameter.UnpackAlignment, 1);
@@ -71,14 +72,14 @@ namespace Chart
             //GL.PixelStore(PixelStoreParameter.UnpackAlignment, 4);
         }
 
-        public (int, int) Array2Image(int x, int y)
+        public Vector2i Array2Image(Vector2i pos)
         {
-            return (x, worldWidth - 1 - y);
+            return (pos.X, worldWidth - 1 - pos.Y);
         }
 
-        public (int, int) World2Array(int x, int y)
+        public Vector2i World2Array(Vector2i pos)
         {
-            return (x + worldWidth / 2, y + worldWidth / 2);
+            return pos + (worldWidth / 2, worldDepth / 2);
         }
     }
 }

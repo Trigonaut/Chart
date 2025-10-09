@@ -108,8 +108,8 @@ namespace Chart.UI
             }
 
             (double facingY, double facingX) = Math.SinCos(Game.camera.yaw);
-            (int mapX, int mapY) = ChartMod.currentMapTexture.World2Array((int)World.player.position.X, (int)World.player.position.Z);
-            (int spawnX, int spawnY) = ChartMod.currentMapTexture.World2Array(World.player.perWorldCharData.spawnPoint.X, World.player.perWorldCharData.spawnPoint.Z);
+            (int mapX, int mapY) = ChartMod.currentMapTexture.World2Array(((int)World.player.position.X, (int)World.player.position.Z));
+            (int spawnX, int spawnY) = ChartMod.currentMapTexture.World2Array((World.player.perWorldCharData.spawnPoint.X, World.player.perWorldCharData.spawnPoint.Z));
 
             // Minimap graphics
             minimap.mapX = mapX - 32;
