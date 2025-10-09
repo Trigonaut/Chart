@@ -25,7 +25,12 @@ namespace Chart.UI
 
         public UIImage map_bg_overlay;
 
-        public UIMapRenderer map;
+        public UIMapRenderer
+            map,
+            map_border_u,
+            map_border_d,
+            map_border_l,
+            map_border_r;
 
         public UIImage map_marker_player;
 
@@ -52,6 +57,13 @@ namespace Chart.UI
             map_bg = (UIImage)map_panel.RegisterNode(new UIImage("map_bg", ChartMod.texture_map, 78, 0, 138, 138));
             //map_bg_overlay = (UIImage)map_bg.RegisterNode(new UIImage("map_bg_overlay", ChartMod.texture_mapbg_overlay, 0, 0, 128, 128));
             map = (UIMapRenderer)map_bg.RegisterNode(new UIMapRenderer("map"));
+
+            map_border_u = (UIMapRenderer)map_bg.RegisterNode(new UIMapRenderer("map_border_u"));
+            map_border_d = (UIMapRenderer)map_bg.RegisterNode(new UIMapRenderer("map_border_d"));
+            map_border_l = (UIMapRenderer)map_bg.RegisterNode(new UIMapRenderer("map_border_l"));
+            map_border_r = (UIMapRenderer)map_bg.RegisterNode(new UIMapRenderer("map_border_r"));
+
+            map_border_u.color = map_border_d.color = map_border_l.color = map_border_r.color = (0f, 0f, 0f, 1f);
 
             map_marker_player = (UIImage)map.RegisterNode(new UIImage("marker_player", ChartMod.texture_map, 9, 82, 9, 9));
             map_marker_player.w = 9;
@@ -180,6 +192,26 @@ namespace Chart.UI
 
                 if (map.x > UIManager.scaledWidth - 100) map.x = UIManager.scaledWidth - 100;
                 if (map.y > UIManager.scaledHeight - 100) map.y = UIManager.scaledHeight - 100;
+
+                map_border_u.x = map.x;
+                map_border_u.y = map.y - 1;
+                map_border_u.w = map.w;
+                map_border_u.h = map.h;
+
+                map_border_d.x = map.x;
+                map_border_d.y = map.y + 1;
+                map_border_d.w = map.w;
+                map_border_d.h = map.h;
+
+                map_border_l.x = map.x - 1;
+                map_border_l.y = map.y;
+                map_border_l.w = map.w;
+                map_border_l.h = map.h;
+
+                map_border_r.x = map.x + 1;
+                map_border_r.y = map.y;
+                map_border_r.w = map.w;
+                map_border_r.h = map.h;
 
                 map_bg.x = map.x - 40 * mapScale / UIManager.scale;
                 map_bg.y = map.y - 40 * mapScale / UIManager.scale;
