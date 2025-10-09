@@ -96,7 +96,9 @@ namespace Chart
             
             Chunk? chunk = null;
 
-            for (int zi = spanX * (spanZ - 1), z = minWorldZ; z <= maxWorldZ; z++, zi -= spanX)
+            int[] shadingCache = new int[maxWorldX - minWorldX + 1];
+
+            for (int zi = spanX * (spanZ), z = minWorldZ - 1; z <= maxWorldZ; z++, zi -= spanX)
             {
                 for (int xi = 0, x = minWorldX; x <= maxWorldX; x++, xi++)
                 {
@@ -120,31 +122,46 @@ namespace Chart
                         Fluid fluidType;
                         if (blockType != Block.block_empty && blockType != null)
                         {
-                            if (waterDepth == 0) color = ChartMod.blockColors.GetValueOrDefault(blockType);
-                            else color = ChartMod.color_water_shallow;
+                            if (waterDepth == 0)
+                            {
+                                color = ChartMod.blockColors.GetValueOrDefault(blockType);
+                                if (y < shadingCache[xi]) color += ChartMod.color_shade;
+                                else if (y > shadingCache[xi]) color += ChartMod.color_highlight;
+                                shadingCache[xi] = y;
+                            }
+                            else
+                            {
+                                color = ChartMod.color_water_shallow;
+                                shadingCache[xi] = y + waterDepth;
+                            }
+
                         }
                         else if ((fluidType = chunkManager.GetFluid(x, y, z)) != Fluid.empty)
                         {
                             if (fluidType == Fluid.water)
                             {
                                 waterDepth++;
-                                if (waterDepth > 3) color = ChartMod.color_water_deep;
+                                if (waterDepth > 3)
+                                {
+                                    color = ChartMod.color_water_deep;
+                                    shadingCache[xi] = y + waterDepth;
+                                }
                                 else continue;
                             }
                             else if (fluidType == Fluid.lava) color = ChartMod.color_lava;
                         }
-                        else
-                        {
-                            continue;
-                        }
+                        else continue;
+
+                        if (z < minWorldZ) break;
 
                         index *= 4;
                         if (cache[index] != color.X || cache[index + 1] != color.Y || cache[index + 2] != color.Z)
                         {
                             wasModified = true;
-                            cache[index] = (byte)color.X;
-                            cache[index + 1] = (byte)color.Y;
-                            cache[index + 2] = (byte)color.Z;
+
+                            cache[index + 0] = (byte)Math.Clamp(color.X, 0, 255);
+                            cache[index + 1] = (byte)Math.Clamp(color.Y, 0, 255);
+                            cache[index + 2] = (byte)Math.Clamp(color.Z, 0, 255);
                             cache[index + 3] = 255;
                         }
                         break;

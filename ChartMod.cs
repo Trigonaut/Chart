@@ -8,6 +8,7 @@ using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using Alum.API;
 using System.Collections;
+using SoLoud;
 
 namespace Chart
 {
@@ -15,9 +16,9 @@ namespace Chart
     {
         public override string Name => "Chart";
         public override string Author => "Trigonaut";
-        public override string Version => "0.1";
+        public override string Version => "0.1.0";
 
-        //public static Wav sound_map;
+        public static Wav sound_map;
 
         public static Texture texture_map;
 
@@ -34,6 +35,8 @@ namespace Chart
         public static Dictionary<Block, Vector3i> blockColors = [];
 
         public static Vector3i
+            color_shade =           new(-30, -10, 10),
+            color_highlight =       new(30, 10, -10),
             color_water_shallow =   new(0, 157, 237),
             color_water_deep =      new(0, 118, 198),
             color_lava =            new(221, 43, 16),
@@ -51,8 +54,8 @@ namespace Chart
 
         public ChartMod()
         {
-            //sound_map = new Wav();
-            //sound_map.load("mods/Chart/res/map_sound.ogg");
+            sound_map = new Wav();
+            sound_map.load("mods/Chart/res/map_sound.ogg");
 
             input_openMap = new("open_map", OpenTK.Windowing.GraphicsLibraryFramework.Keys.M);
             //input_dumpMapCache = new("dump_map", OpenTK.Windowing.GraphicsLibraryFramework.Keys.K);

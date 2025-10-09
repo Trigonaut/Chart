@@ -15,6 +15,12 @@
     <ProjectReference Include="..\Alum\Alum.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Reference Include="SoLoudLib">
+      <HintPath>..\SoLoudLib.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <Exec Command="copy $(TargetDir)$(MSBuildProjectName).dll $(SolutionDir)Allumeria\bin\Debug\netcoreapp9.0\mods\$(MSBuildProjectName)\ /Y&#xD;&#xA;xcopy $(ProjectDir)res\* $(SolutionDir)Allumeria\bin\Debug\netcoreapp9.0\mods\$(MSBuildProjectName)\res\ /E /Y /C" />
   </Target>

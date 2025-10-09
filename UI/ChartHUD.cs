@@ -1,4 +1,5 @@
 ﻿using Allumeria;
+using Allumeria.Audio;
 using Allumeria.ChunkManagement;
 using Allumeria.ChunkManagement.Lighting;
 using Allumeria.Input;
@@ -6,6 +7,7 @@ using Allumeria.UI;
 using Allumeria.UI.Menus;
 using Allumeria.UI.UINodes;
 using OpenTK.Mathematics;
+using SoLoud;
 
 namespace Chart.UI
 {
@@ -248,7 +250,7 @@ namespace Chart.UI
             mapOpen = true;
             World.player.inMenu = true;
             InputManager.UnlockMouse();
-            //AudioPlayer.PlaySoundPlayer(ChartMod.sound_map, 1f);
+            AudioPlayer.PlaySoundPlayer(ChartMod.sound_map, 1f);
         }
 
         public void Zoom(int newScale)
