@@ -100,6 +100,7 @@ namespace Chart
 
             for (int zi = spanX * (spanZ), z = minWorldZ - 1; z <= maxWorldZ; z++, zi -= spanX)
             {
+                if (z < -ChartMod.currentMapTexture.worldDepth/2) continue;
                 for (int xi = 0, x = minWorldX; x <= maxWorldX; x++, xi++)
                 {
                     int waterDepth = 0;
