@@ -121,7 +121,7 @@ namespace Chart
                         PaletteEntry block = chunkManager.GetBlockWithMetadataFast(chunk, x, y, z);
                         Block blockType = Block.blocks[block.blockID];
                         Fluid fluidType;
-                        if (blockType != Block.block_empty && blockType != null)
+                        if (blockType != Block.empty && blockType != null)
                         {
                             if (waterDepth == 0)
                             {

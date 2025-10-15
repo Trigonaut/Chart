@@ -222,5 +222,10 @@ namespace Chart
         {
             
         }
+
+        public override void OnRenderFrame()
+        {
+            
+        }
     }
 }
