@@ -16,7 +16,7 @@ namespace Chart
     {
         public override string Name => "Chart";
         public override string Author => "Trigonaut";
-        public override string Version => "0.1.0";
+        public override string Version => "0.1.2";
 
         public static Wav sound_map;
 
