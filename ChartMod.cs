@@ -6,17 +6,19 @@ using Allumeria.Input;
 using Allumeria.Rendering;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
-using Alum.API;
 using System.Collections;
 using SoLoud;
+using Ignitron.Loader;
+using HarmonyLib;
+using Allumeria.UI;
+using Allumeria.DataManagement.Saving;
+using System.Text.RegularExpressions;
 
 namespace Chart
 {
-    public class ChartMod : AlumMod
+    public class ChartMod : IModEntrypoint
     {
-        public override string Name => "Chart";
-        public override string Author => "Trigonaut";
-        public override string Version => "0.1.2";
+        public static ChartMod singleton;
 
         public static Wav sound_map;
 
@@ -29,6 +31,9 @@ namespace Chart
         public static ChartHUD menu_map_hud;
 
         public static InputChannel input_openMap;
+
+        public static string loadWorld = null;
+        public static bool saveWorld = false;
 
         //public static InputChannel input_dumpMapCache;
 
@@ -52,42 +57,116 @@ namespace Chart
 
         public static bool blockColorsLoaded = false;
 
-        public ChartMod()
+        public void Main(ModBox box)
         {
-            sound_map = new Wav();
-            sound_map.load("mods/Chart/res/map_sound.ogg");
+            singleton = new ChartMod();
 
-            input_openMap = new("open_map", OpenTK.Windowing.GraphicsLibraryFramework.Keys.M);
-            //input_dumpMapCache = new("dump_map", OpenTK.Windowing.GraphicsLibraryFramework.Keys.K);
+            Logger.Info("Installed Chart");
+            Harmony harmony = new("Trigonaut.Chart");
+            harmony.PatchAll();
 
-            mapScanner = new MapScanner();
 
-            texture_map = new Texture(Directory.GetCurrentDirectory() + "/mods/Chart/res/map.png", true, true, false, false);
         }
 
-        public override void OnPostLoad()
+        [HarmonyPatch(typeof(Game))]
+        [HarmonyPatch("OnLoad")]
+        public class Game_OnLoad_Patch
         {
-            menu_map_hud = (ChartHUD)Game.uiManager.RegisterMenuController(new ChartHUD(), Game.menu_HUD.panel_main);
+            [HarmonyPrefix]
 
-            IList list = (IList)Alum.Alum.uiNode_nodes.GetValue(Game.uiManager.rootNode);
-            list.Remove(menu_map_hud.map_panel);
-            list.Insert(0, menu_map_hud.map_panel);
-
-            Texture terrainTexture = (Texture)Alum.Alum.allumeriaAssembly.GetType("Allumeria.Rendering.Drawing").GetField("defaultTexture").GetValue(null);
-            
-            byte[] blockAtlasPixels = new byte[terrainTexture.size * terrainTexture.size * 4];
-
-            terrainTexture.Use();
-            GL.GetTexImage(TextureTarget.Texture2D, 0, PixelFormat.Rgba, PixelType.UnsignedByte, blockAtlasPixels);
-
-            ThreadPool.QueueUserWorkItem(CalculateBlockColors, (terrainTexture.size, blockAtlasPixels));
-        }
-
-        public override void OnUpdateFrame()
-        {
-            if (mapScanner.updateReady)
+            public static void Prefix()
             {
-                mapScanner.UpdateTexture();
+                sound_map = new Wav();
+                sound_map.load("mods/Chart/res/map_sound.ogg");
+
+                input_openMap = new("open_map", OpenTK.Windowing.GraphicsLibraryFramework.Keys.M);
+                //input_dumpMapCache = new("dump_map", OpenTK.Windowing.GraphicsLibraryFramework.Keys.K);
+
+                mapScanner = new MapScanner();
+
+                texture_map = new Texture(Directory.GetCurrentDirectory() + "/mods/Chart/res/map.png", true, true, false, false);
+            }
+
+            [HarmonyPostfix]
+            public static void Postfix()
+            {
+                while(!Game.threadedLoadDone)
+                {
+                    //hang main thread until threaded loading done fuck you
+                }
+
+                menu_map_hud = (ChartHUD)Game.uiManager.RegisterMenuController(new ChartHUD(), Game.menu_HUD.panel_main);
+                IList list = (IList) typeof(UINode).GetField("nodes").GetValue(Game.uiManager.rootNode);
+                list.Remove(menu_map_hud.map_panel);
+                list.Insert(0, menu_map_hud.map_panel);
+
+                byte[] blockAtlasPixels = new byte[Allumeria.Rendering.Drawing.defaultTexture.size * Allumeria.Rendering.Drawing.defaultTexture.size * 4];
+
+                GL.BindTexture(TextureTarget.Texture2D, Allumeria.Rendering.Drawing.defaultTexture.id);
+                GL.GetTexImage(TextureTarget.Texture2D, 0, PixelFormat.Rgba, PixelType.UnsignedByte, blockAtlasPixels);
+
+                ThreadPool.QueueUserWorkItem(CalculateBlockColors, (Allumeria.Rendering.Drawing.defaultTexture.size, blockAtlasPixels));
+            }
+        }
+
+        [HarmonyPatch(typeof(Game))]
+        [HarmonyPatch("OnUpdateFrame")]
+        public class Game_Update_Patch
+        {
+            [HarmonyPrefix]
+            public static void Prefix()
+            {
+                if(loadWorld != null)
+                {
+                    
+                    using (GameSaver.saveLock.EnterScope())
+                    {
+                        currentMapTexture = new MapTexture(Game.worldManager.world.worldWidth * 32, Game.worldManager.world.worldLength * 32);
+
+                        FileStream? loadMap = null;
+                        try
+                        {
+                            loadMap = File.OpenRead(Game.saveDirectiory + "/saves/" + loadWorld + "/map.png");
+                        }
+                        catch (FileNotFoundException)
+                        {
+                            Logger.Info("No Chart data found in save for " + loadWorld + ". creating new map.png");
+
+                            FileStream stream = File.Create(Game.saveDirectiory + "/saves/" + loadWorld + "/map.png");
+                            new StbImageWriteSharp.ImageWriter().WritePng(new byte[currentMapTexture.worldWidth * currentMapTexture.worldDepth * 4], currentMapTexture.worldWidth, currentMapTexture.worldDepth, StbImageWriteSharp.ColorComponents.RedGreenBlueAlpha, stream);
+                            stream.Close();
+
+                            loadMap = File.OpenRead(Game.saveDirectiory + "/saves/" + loadWorld + "/map.png");
+                        }
+
+                        currentMapTexture.LoadPng(loadMap);
+
+                        Logger.Info("Loading Chart data for save " + loadWorld);
+
+                        mapScanner.StartScanning(currentMapTexture);
+                    }
+                    loadWorld = null;
+                }
+
+                if(saveWorld)
+                {
+                    saveWorld = false;
+                    string saveName = Game.worldManager.worldName;
+                    saveName = saveName.Trim().ToLower().Replace(' ', '_');
+                    saveName = Regex.Replace(saveName, "[^a-zA-Z0-9_.]+", "", RegexOptions.Compiled);
+
+                    mapScanner.StopScanning();
+
+                    FileStream saveMap = File.OpenWrite(Game.saveDirectiory + "/saves/" + saveName + "/map.png");
+                    currentMapTexture.SavePng(saveMap);
+
+                    mapScanner.StartScanning(currentMapTexture);
+                }
+
+                if (mapScanner.updateReady)
+                {
+                    mapScanner.UpdateTexture();
+                }
             }
         }
 
@@ -146,86 +225,27 @@ namespace Chart
             blockColorsLoaded = true;
         }
 
-        public override void OnCreateWorld()
+        [HarmonyPatch(typeof(GameSaver))]
+        [HarmonyPatch("SaveGame")]
+        public class GameSaver_SaveGame_Patch
         {
-
-        }
-        public override void OnLoadWorld(string dir)
-        {
-            while (Game.worldManager.world == null)
+            [HarmonyPrefix]
+            public static void Prefix()
             {
-                Thread.Yield();
+                saveWorld = true;
             }
+        }
 
-            currentMapTexture = new MapTexture(Game.worldManager.world.worldWidth * 32, Game.worldManager.world.worldLength * 32);
-
-            FileStream? loadMap = null;
-            try
+        
+        [HarmonyPatch(typeof(GameSaver))]
+        [HarmonyPatch("LoadGame")]
+        public class GameSaver_LoadGame_Patch
+        {
+            [HarmonyPostfix]
+            public static void Postfix(GameSaver __instance, string worldName)
             {
-                loadMap = File.OpenRead(Game.saveDirectiory + "/saves/" + dir + "/map.png");
+                loadWorld = worldName;
             }
-            catch (FileNotFoundException)
-            {
-                Logger.Info("No Chart data found in save for " + dir + ". creating new map.png");
-
-                FileStream stream = File.Create(Game.saveDirectiory + "/saves/" + dir + "/map.png");
-                new StbImageWriteSharp.ImageWriter().WritePng(new byte[currentMapTexture.worldWidth * currentMapTexture.worldDepth * 4], currentMapTexture.worldWidth, currentMapTexture.worldDepth, StbImageWriteSharp.ColorComponents.RedGreenBlueAlpha, stream);
-                stream.Close();
-
-                loadMap = File.OpenRead(Game.saveDirectiory + "/saves/" + dir + "/map.png");
-            }
-
-            currentMapTexture.LoadPng(loadMap);
-
-            Logger.Info("Loading Chart data for save " + dir);
-
-            mapScanner.StartScanning(currentMapTexture);
-        }
-
-        public override void OnSaveWorld(string dir)
-        {
-            mapScanner.StopScanning();
-
-            FileStream saveMap = File.OpenWrite(Game.saveDirectiory + "/saves/" + dir + "/map.png");
-            currentMapTexture.SavePng(saveMap);
-
-            mapScanner.StartScanning(currentMapTexture);
-        }
-
-        public override void OnQuitWorld()
-        {
-            mapScanner.StopScanning();
-            currentMapTexture = null;
-        }
-
-        public override void OnDeleteWorld(string dir)
-        {
-            
-        }
-
-        public override void OnCreateCharacter()
-        {
-            
-        }
-
-        public override void OnLoadCharacter(string dir)
-        {
-            
-        }
-
-        public override void OnSaveCharacter(string dir)
-        {
-            
-        }
-
-        public override void OnDeleteCharacter(string dir)
-        {
-            
-        }
-
-        public override void OnRenderFrame()
-        {
-            
         }
     }
 }

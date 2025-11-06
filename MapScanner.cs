@@ -63,7 +63,7 @@ namespace Chart
         {
             while (!waitingToTerminate)
             {
-                if (!updateReady && World.player != null && ChartMod.blockColorsLoaded)
+                if (!updateReady && Game.worldManager.world != null && World.player != null && ChartMod.blockColorsLoaded)
                 {
                     //(int colX, int colZ) = World2Col(World.player.position.X, World.player.position.Z);
                     int minWorldX = (int)World.player.position.X - target.scanSize / 2;
@@ -83,6 +83,7 @@ namespace Chart
 
                 Thread.Sleep(updateFrequencyMs);
             }
+            //ChartMod.currentMapTexture = null;
         }
 
         public bool Scan(int minWorldX, int minWorldZ, int maxWorldX, int maxWorldZ)

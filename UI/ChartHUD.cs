@@ -96,7 +96,7 @@ namespace Chart.UI
             minimap_bg.show = show && !mapOpen;
             map_panel.show = show && mapOpen;
 
-            if (!show || World.player == null)
+            if (!show || World.player == null || ChartMod.currentMapTexture == null)
             {
                 return;
             }
