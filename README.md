@@ -19,3 +19,6 @@ Allumeria
         └── res
 ```
 
+Chart will automatically map the world as you explore.
+To bring up a full world map, press M.
+This key can be rebinded in settings.
